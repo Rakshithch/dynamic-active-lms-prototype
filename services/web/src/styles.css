@@ -1,0 +1,16 @@
+:root { --radius: 10px; --border:#e6e6e6; --text:#111; --muted:#6b7280; }
+* { box-sizing: border-box; }
+body { margin:0; font-family: Inter, system-ui, Segoe UI, Arial; color:var(--text); }
+.app { max-width: 1000px; margin: 28px auto; padding: 0 16px; }
+h1 { font-size: 32px; margin: 0 0 18px; }
+h2 { margin: 0 0 10px; }
+.card { border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin: 14px 0; background:#fff; }
+.row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.btn { border:1px solid var(--border); border-radius:8px; padding:8px 12px; background:#111; color:#fff; cursor:pointer; }
+.btn.secondary { background:#fff; color:#111; }
+.btn:disabled { opacity:.6; cursor:not-allowed; }
+.input, select, textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; }
+label { color: var(--muted); font-size: 14px; }
+table { width:100%; border-collapse: collapse; }
+th, td { padding:10px; border-bottom:1px solid var(--border); }
+.tag { font-size:12px; padding:2px 8px; border:1px solid var(--border); border-radius:999px; color:#374151; }
