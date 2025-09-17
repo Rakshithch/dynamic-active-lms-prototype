@@ -1,14 +1,15 @@
 // services/web/src/App.jsx
 import React, { useEffect, useState } from 'react'
-import { getStudentDashboard, getQuiz, submitQuiz } from './api'
+import { getStudentDashboard, getQuiz, submitQuiz, login, logout, getCurrentUser } from './api'
 import Teacher from './Teacher'
+import Login from './Login'
 
 function StudentDashboard({ onStartQuiz }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState('')
 
   useEffect(() => {
-    getStudentDashboard(2).then(setData).catch(e => setErr(e.message))
+    getStudentDashboard().then(setData).catch(e => setErr(e.message))
   }, [])
 
   if (err) return <p>Error: {err}</p>
@@ -65,7 +66,6 @@ function QuizPlayer({ assignmentId, onDone }) {
   const submit = async () => {
     const payload = {
       assignment_id: assignmentId,
-      student_id: 2, // Ava
       answers: quiz.questions.map(q => ({ question_id: q.id, answer: answers[q.id] || '' }))
     }
     try {
@@ -111,24 +111,72 @@ function QuizPlayer({ assignmentId, onDone }) {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [view, setView] = useState('dashboard')   // student views
   const [assignmentId, setAssignmentId] = useState(null)
-  const [role, setRole] = useState('student')     // 'student' | 'teacher'
+
+  // Check for existing session on app load
+  useEffect(() => {
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      getCurrentUser()
+        .then(data => setUser(data.user))
+        .catch(err => {
+          console.error('Session check failed:', err)
+          logout()
+        })
+        .finally(() => setLoading(false))
+    } else {
+      setLoading(false)
+    }
+  }, [])
+
+  const handleLogin = async (email, password) => {
+    setLoading(true)
+    try {
+      const data = await login(email, password)
+      setUser(data.user)
+    } catch (error) {
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLogout = () => {
+    logout()
+    setUser(null)
+    setView('dashboard')
+  }
+
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading-container">
+          <p>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login onLogin={handleLogin} loading={loading} />
+  }
 
   return (
     <div className="app">
       <div className="row">
-        <h1>Dynamic Active LMS Prototype</h1>
-        <div>
-          <label>Role&nbsp;</label>
-          <select value={role} onChange={e=>setRole(e.target.value)}>
-            <option value="student">Student</option>
-            <option value="teacher">Teacher</option>
-          </select>
+        <h1>Dynamic Active LMS</h1>
+        <div className="user-info">
+          <span>Welcome, {user.name} ({user.role})</span>
+          <button className="btn btn-secondary" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       </div>
 
-      {role === 'student' ? (
+      {user.role === 'student' ? (
         view === 'dashboard' ? (
           <div className="card">
             <StudentDashboard onStartQuiz={(id)=>{ setAssignmentId(id); setView('quiz') }} />

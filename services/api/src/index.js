@@ -2,6 +2,13 @@ import express from 'express'
 import cors from 'cors'
 import axios from 'axios'
 import { query } from './db.js'
+import { 
+  generateToken, 
+  authenticateUser, 
+  authenticateToken, 
+  requireRole, 
+  hashPassword 
+} from './auth.js'
 
 const app = express()
 app.use(cors())
@@ -11,12 +18,75 @@ const AI_URL = process.env.AI_URL || 'http://localhost:8000'
 
 app.get('/health', (req, res) => res.json({ ok: true }))
 
-// Student dashboard: due assignments + recommendation
-app.get('/student/:id/dashboard', async (req, res) => {
-  const id = Number(req.params.id)
+// ========== AUTHENTICATION ROUTES ==========
+
+// Login endpoint
+app.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password required' })
+  }
+  
   try {
-    const student = (await query("SELECT id, name FROM users WHERE id=$1 AND role='student'", [id]))[0]
-    if (!student) return res.status(404).json({ error: 'Student not found' })
+    const user = await authenticateUser(email, password)
+    const token = generateToken(user)
+    
+    res.json({ 
+      user, 
+      token,
+      message: 'Login successful' 
+    })
+  } catch (error) {
+    res.status(401).json({ error: error.message })
+  }
+})
+
+// Get current user info
+app.get('/auth/me', authenticateToken, (req, res) => {
+  res.json({ user: req.user })
+})
+
+// Register endpoint (for demo purposes)
+app.post('/auth/register', async (req, res) => {
+  const { email, password, name, role } = req.body
+  
+  if (!email || !password || !name || !role) {
+    return res.status(400).json({ error: 'All fields required' })
+  }
+  
+  try {
+    const hashedPassword = await hashPassword(password)
+    const newUser = await query(
+      `INSERT INTO users (email, password_hash, name, role) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING id, email, name, role`,
+      [email, hashedPassword, name, role]
+    )
+    
+    const user = newUser[0]
+    const token = generateToken(user)
+    
+    res.status(201).json({ 
+      user, 
+      token,
+      message: 'Registration successful' 
+    })
+  } catch (error) {
+    if (error.code === '23505') { // Unique violation
+      res.status(400).json({ error: 'Email already exists' })
+    } else {
+      console.error(error)
+      res.status(500).json({ error: 'Registration failed' })
+    }
+  }
+})
+
+// Student dashboard: due assignments + recommendation
+app.get('/student/dashboard', authenticateToken, requireRole('student'), async (req, res) => {
+  const studentId = req.user.id
+  try {
+    const student = { id: req.user.id, name: req.user.name }
 
     const due = await query(`
       SELECT a.id, l.title, a.due_at
@@ -26,12 +96,12 @@ app.get('/student/:id/dashboard', async (req, res) => {
       JOIN lessons l ON l.id = a.lesson_id
       ORDER BY a.due_at ASC
       LIMIT 5;
-    `, [id])
+    `, [studentId])
 
-    const masteryRows = await query('SELECT skill_tag, mastery_pct FROM mastery WHERE student_id=$1', [id])
+    const masteryRows = await query('SELECT skill_tag, mastery_pct FROM mastery WHERE student_id=$1', [studentId])
     const mastery = Object.fromEntries(masteryRows.map(r => [r.skill_tag, Number(r.mastery_pct)]))
 
-    const rec = await axios.post(`${AI_URL}/recommend_next`, { student_id: id, mastery }).then(r => r.data)
+    const rec = await axios.post(`${AI_URL}/recommend_next`, { student_id: studentId, mastery }).then(r => r.data)
 
     res.json({ student, due_assignments: due, recommendation: rec })
   } catch (e) {
@@ -71,8 +141,9 @@ app.get('/assignments/:id/quiz', async (req, res) => {
 })
 
 // Submit quiz, auto-grade, save responses, update mastery
-app.post('/submissions', async (req, res) => {
-  const { assignment_id, student_id, answers } = req.body
+app.post('/submissions', authenticateToken, requireRole('student'), async (req, res) => {
+  const { assignment_id, answers } = req.body
+  const student_id = req.user.id
   try {
     const sub = (await query(
       `INSERT INTO submissions (assignment_id, student_id)
@@ -146,18 +217,14 @@ app.post('/submissions', async (req, res) => {
   }
 })
 
-const port = Number(process.env.PORT || 8080)
-app.listen(port, () => console.log(`API listening on :${port}`))
-
 // ---------- TEACHER ROUTES ----------
 
-// GET /teacher/:id/dashboard
+// GET /teacher/dashboard
 // Returns classes taught, upcoming assignments (next 14 days), and recent submissions
-app.get('/teacher/:id/dashboard', async (req, res) => {
-  const teacherId = Number(req.params.id)
+app.get('/teacher/dashboard', authenticateToken, requireRole('teacher'), async (req, res) => {
+  const teacherId = req.user.id
   try {
-    const teacher = (await query("SELECT id, name FROM users WHERE id=$1 AND role='teacher'", [teacherId]))[0]
-    if (!teacher) return res.status(404).json({ error: 'Teacher not found' })
+    const teacher = { id: req.user.id, name: req.user.name }
 
     const classes = await query(
       `SELECT id, name FROM classes WHERE teacher_id=$1 ORDER BY name ASC`,
@@ -194,69 +261,120 @@ app.get('/teacher/:id/dashboard', async (req, res) => {
   }
 })
 
-/**
- * POST /assignments
- * Create an assignment. Two modes:
- *  A) Reference an existing lesson_id
- *  B) Create a new lesson + (optional) questions, then create the assignment
- *
- * Body examples:
- *  { "class_id": 1, "lesson_id": 1, "type": "quiz", "due_at": "2025-09-20T15:00:00" }
- *
- *  {
- *    "class_id": 1, "type": "quiz", "due_at": "2025-09-20T15:00:00",
- *    "lesson": { "title":"Decimals Basics","subject":"Math","grade_band":"6-8","skill_tag":"decimals","difficulty":1 },
- *    "questions": [
- *      {"type":"mcq","prompt":"0.3 + 0.4 = ?","options":["0.6","0.7"],"answer_key":"0.7"},
- *      {"type":"short","prompt":"Explain place value in decimals","rubric_keywords":["tenths","hundredths","place value"]}
- *    ]
- *  }
- */
-app.post('/assignments', async (req, res) => {
-  const { class_id, lesson_id, type = 'quiz', due_at, lesson, questions = [] } = req.body
-  if (!class_id || !type || !due_at) return res.status(400).json({ error: 'class_id, type, due_at required' })
+// Generate questions using AI
+app.post('/ai/generate-questions', authenticateToken, requireRole('teacher'), async (req, res) => {
+  const { topic, difficulty, skill_tag, num_questions, grade_level } = req.body
+  
+  if (!topic || !skill_tag) {
+    return res.status(400).json({ error: 'Topic and skill_tag required' })
+  }
+  
   try {
-    let lid = lesson_id
+    const aiResult = await axios.post(`${AI_URL}/generate_questions`, {
+      topic,
+      difficulty: difficulty || 1,
+      skill_tag,
+      num_questions: num_questions || 3,
+      grade_level: grade_level || '6-8'
+    }).then(r => r.data)
+    
+    res.json(aiResult)
+  } catch (error) {
+    console.error('AI question generation failed:', error)
+    res.status(500).json({ error: 'Question generation failed' })
+  }
+})
 
-    // If lesson details provided, create lesson (and optional questions)
-    if (!lid && lesson) {
-      const newLesson = (await query(
+// POST /assignments
+// Create an assignment with optional AI-generated questions
+app.post('/assignments', authenticateToken, requireRole('teacher'), async (req, res) => {
+  const { class_id, lesson_data, questions, due_at, type } = req.body
+  const teacherId = req.user.id
+  
+  try {
+    // Verify teacher owns the class
+    const classCheck = await query(
+      'SELECT id FROM classes WHERE id = $1 AND teacher_id = $2',
+      [class_id, teacherId]
+    )
+    
+    if (classCheck.length === 0) {
+      return res.status(403).json({ error: 'Access denied to this class' })
+    }
+    
+    let lesson_id;
+    
+    // Create new lesson if lesson_data provided
+    if (lesson_data) {
+      const newLesson = await query(
         `INSERT INTO lessons (title, subject, grade_band, skill_tag, difficulty, content_url)
-         VALUES ($1,$2,$3,$4,$5,$6)
+         VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id`,
-        [lesson.title, lesson.subject, lesson.grade_band, lesson.skill_tag, lesson.difficulty || 1, lesson.content_url || '#']
-      ))[0]
-      lid = newLesson.id
-
-      // Add questions if provided
+        [
+          lesson_data.title,
+          lesson_data.subject || 'Math',
+          lesson_data.grade_band || '6-8',
+          lesson_data.skill_tag,
+          lesson_data.difficulty || 1,
+          lesson_data.content_url || '#'
+        ]
+      )
+      lesson_id = newLesson[0].id
+    } else {
+      lesson_id = req.body.lesson_id
+    }
+    
+    if (!lesson_id) {
+      return res.status(400).json({ error: 'lesson_id or lesson_data required' })
+    }
+    
+    // Create assignment
+    const assignment = await query(
+      `INSERT INTO assignments (class_id, lesson_id, type, due_at)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, class_id, lesson_id, type, due_at`,
+      [class_id, lesson_id, type || 'quiz', due_at]
+    )
+    
+    const assignmentId = assignment[0].id
+    
+    // Add questions if provided
+    if (questions && questions.length > 0) {
       for (const q of questions) {
         await query(
           `INSERT INTO questions (lesson_id, type, prompt, options, answer_key, rubric_keywords)
-           VALUES ($1,$2,$3,$4,$5,$6)`,
+           VALUES ($1, $2, $3, $4, $5, $6)`,
           [
-            lid,
+            lesson_id,
             q.type,
             q.prompt,
             q.options ? JSON.stringify(q.options) : null,
-            q.answer_key || null,
+            q.answer_key,
             q.rubric_keywords ? JSON.stringify(q.rubric_keywords) : null
           ]
         )
       }
     }
-
-    if (!lid) return res.status(400).json({ error: 'Provide lesson_id or lesson payload' })
-
-    const a = (await query(
-      `INSERT INTO assignments (class_id, lesson_id, type, due_at)
-       VALUES ($1,$2,$3,$4) RETURNING id`,
-      [class_id, lid, type, due_at]
-    ))[0]
-
-    res.status(201).json({ assignment_id: a.id, lesson_id: lid })
-  } catch (e) {
-    console.error(e)
-    res.status(500).json({ error: 'Create failed' })
+    
+    // Get full assignment details for response
+    const fullAssignment = await query(
+      `SELECT a.id, a.type, a.due_at, l.title, l.subject, l.skill_tag, c.name as class_name
+       FROM assignments a
+       JOIN lessons l ON l.id = a.lesson_id
+       JOIN classes c ON c.id = a.class_id
+       WHERE a.id = $1`,
+      [assignmentId]
+    )
+    
+    res.status(201).json({
+      assignment: fullAssignment[0],
+      questions_added: questions ? questions.length : 0,
+      message: 'Assignment created successfully'
+    })
+    
+  } catch (error) {
+    console.error('Assignment creation failed:', error)
+    res.status(500).json({ error: 'Failed to create assignment' })
   }
 })
 
@@ -335,3 +453,6 @@ app.get('/assignments/:id/results', async (req, res) => {
     res.status(500).json({ error: 'Results fetch failed' })
   }
 })
+
+const port = Number(process.env.PORT || 8080)
+app.listen(port, () => console.log(`API listening on :${port}`))

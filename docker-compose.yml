@@ -22,12 +22,12 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       AI_URL: http://ai:8000
-    ports: ["8080:8080"]
+    ports: ["3001:8080"]
     depends_on: [db, ai]
 
   web:
     build: ./services/web
     environment:
-      VITE_API_URL: http://localhost:8080
+      VITE_API_URL: http://localhost:3001
     ports: ["5173:5173"]
     depends_on: [api]

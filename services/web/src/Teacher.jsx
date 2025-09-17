@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   getTeacherDashboard,
   createAssignment,
   getAssignmentResults,
 } from './api';
+import AssignmentCreator from './AssignmentCreator';
 
 function Card({ children }) {
   return <div style={{border:'1px solid #ddd', borderRadius:8, padding:12, marginBottom:12}}>{children}</div>;
@@ -62,6 +63,8 @@ export default function Teacher() {
   const [dash, setDash] = useState(null);
   const [err, setErr] = useState('');
   const [viewResultsFor, setViewResultsFor] = useState(null);
+  const [showAICreator, setShowAICreator] = useState(false);
+  const [showManualCreator, setShowManualCreator] = useState(false);
 
   // Create form state
   const [useExistingLesson, setUseExistingLesson] = useState(true);
@@ -83,8 +86,8 @@ export default function Teacher() {
   ]);
 
   useEffect(() => {
-    getTeacherDashboard(1).then(setDash).catch(e => setErr(e.message));
-  }, []);
+    getTeacherDashboard().then(setDash).catch(e => setErr(e.message))
+  }, [])
 
   const classes = dash?.classes || [];
   const upcoming = dash?.upcoming_assignments || [];
@@ -146,83 +149,44 @@ export default function Teacher() {
 
       <Card>
         <h3>Create Assignment</h3>
-        <label>
-          Class:
-          <select value={classId} onChange={e => setClassId(e.target.value)} style={{marginLeft:8}}>
-            {classes.map(c => <option key={c.id} value={c.id}>{c.name} (#{c.id})</option>)}
-          </select>
-        </label>
-        <br /><br />
-        <label>
-          Due at:
-          <input type="datetime-local" value={dueAt} onChange={e => setDueAt(e.target.value)} style={{marginLeft:8}} />
-        </label>
-        <br /><br />
-
-        <label>
-          <input type="radio" checked={useExistingLesson} onChange={() => setUseExistingLesson(true)} />
-          Use existing lesson_id:
-        </label>
-        <input type="number" value={lessonId} onChange={e => setLessonId(e.target.value)} style={{width:80, marginLeft:8}} />
-
-        <br />
-        <label>
-          <input type="radio" checked={!useExistingLesson} onChange={() => setUseExistingLesson(false)} />
-          Create new lesson + questions
-        </label>
-
-        {!useExistingLesson && (
-          <div style={{marginTop:12}}>
-            <b>Lesson</b><br/>
-            <input placeholder="Title" value={lesson.title} onChange={e=>setLesson({...lesson,title:e.target.value})} style={{width:'100%'}} /><br/>
-            <input placeholder="Subject" value={lesson.subject} onChange={e=>setLesson({...lesson,subject:e.target.value})} />
-            <input placeholder="Grade band" value={lesson.grade_band} onChange={e=>setLesson({...lesson,grade_band:e.target.value})} style={{marginLeft:8}} />
-            <input placeholder="Skill tag" value={lesson.skill_tag} onChange={e=>setLesson({...lesson,skill_tag:e.target.value})} style={{marginLeft:8}} />
-            <input type="number" min="1" max="5" value={lesson.difficulty} onChange={e=>setLesson({...lesson,difficulty:Number(e.target.value)})} style={{marginLeft:8, width:60}} />
-            <div style={{marginTop:8}}>
-              <b>Questions</b>
-              {questions.map((q, idx) => (
-                <div key={idx} style={{border:'1px dashed #ccc', padding:8, marginTop:8}}>
-                  <select value={q.type} onChange={e=>{
-                    const arr=[...questions]; arr[idx]={...q,type:e.target.value}; setQuestions(arr);
-                  }}>
-                    <option value="mcq">MCQ</option>
-                    <option value="short">Short</option>
-                  </select>
-                  <input placeholder="Prompt" value={q.prompt} onChange={e=>{
-                    const arr=[...questions]; arr[idx]={...q,prompt:e.target.value}; setQuestions(arr);
-                  }} style={{width:'100%', marginTop:6}} />
-                  {q.type==='mcq' ? (
-                    <>
-                      <input placeholder="Option A" value={q.options?.[0]||''} onChange={e=>{
-                        const arr=[...questions]; const opts=[...(q.options||[])]; opts[0]=e.target.value; arr[idx]={...q,options:opts}; setQuestions(arr);
-                      }} />
-                      <input placeholder="Option B" value={q.options?.[1]||''} onChange={e=>{
-                        const arr=[...questions]; const opts=[...(q.options||[])]; opts[1]=e.target.value; arr[idx]={...q,options:opts}; setQuestions(arr);
-                      }} style={{marginLeft:8}} />
-                      <input placeholder="Answer key" value={q.answer_key||''} onChange={e=>{
-                        const arr=[...questions]; arr[idx]={...q,answer_key:e.target.value}; setQuestions(arr);
-                      }} style={{marginLeft:8}} />
-                    </>
-                  ) : (
-                    <input placeholder="Rubric keywords (comma-separated)" value={(q.rubric_keywords||[]).join(',')} onChange={e=>{
-                      const arr=[...questions]; arr[idx]={...q,rubric_keywords:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)}; setQuestions(arr);
-                    }} />
-                  )}
-                </div>
-              ))}
-              <button onClick={()=>setQuestions(q=>[...q, {type:'mcq', prompt:'', options:['',''], answer_key:''}])}>+ Add Question</button>
-            </div>
-          </div>
-        )}
-
-        <div style={{marginTop:12}}>
-          <button onClick={submitCreate}>Create Assignment</button>
+        <div className="assignment-options">
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowAICreator(true)}
+            style={{marginRight: '12px'}}
+          >
+            🤖 Create with AI
+          </button>
+          <button 
+            className="btn btn-secondary"
+            onClick={() => setShowManualCreator(true)}
+          >
+            Manual Creation
+          </button>
         </div>
+        <p style={{color: '#666', fontSize: '14px', marginTop: '8px'}}>
+          AI-powered creation generates questions automatically based on your topic and requirements.
+        </p>
       </Card>
 
       {viewResultsFor && (
         <Results assignmentId={viewResultsFor} onClose={()=>setViewResultsFor(null)} />
+      )}
+      
+      {showAICreator && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <AssignmentCreator 
+              classes={classes}
+              onAssignmentCreated={() => {
+                setShowAICreator(false);
+                // Refresh dashboard
+                getTeacherDashboard().then(setDash).catch(e => setErr(e.message));
+              }}
+              onCancel={() => setShowAICreator(false)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
