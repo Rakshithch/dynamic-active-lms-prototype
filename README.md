@@ -2,7 +2,8 @@
 
 **Developer:** Rakshith Chandupatla  
 **Project Type:** Software Developer Internship Assessment  
-**Submission Date:** September 2025
+**Submission Date:** September 2025  
+**GitHub Repository:** [https://github.com/Rakshithch/dynamic-active-lms-prototype](https://github.com/Rakshithch/dynamic-active-lms-prototype)
 
 ## 🎯 Project Overview
 
@@ -53,8 +54,8 @@ Dynamic Active LMS is a comprehensive K-12 Learning Management System that lever
 ### **Setup Instructions**
 ```bash
 # 1. Clone the repository
-git clone [your-repo-url]
-cd dynamic-active-lms
+git clone https://github.com/Rakshithch/dynamic-active-lms-prototype.git
+cd dynamic-active-lms-prototype
 
 # 2. Configure environment
 cp .env.example .env
