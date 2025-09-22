@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { createAssignmentWithAI, generateQuestions } from './api'
 import { useToast } from './Toast.jsx'
-import { useFormValidation, validators, FormField } from './FormValidation.jsx'
+import { useFormValidation, validators, FormField } from './SimpleFormValidation.jsx'
 
-export default function AssignmentCreator({ classes, onAssignmentCreated, onCancel }) {
+export default function WorkingAssignmentCreator({ classes, onAssignmentCreated, onCancel }) {
   const [generatedQuestions, setGeneratedQuestions] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -42,13 +42,17 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
 
   const generateQuestionsWithAI = async (validatedData) => {
     if (!isValid) {
-      toast.warning('Please fill in all required fields correctly')
+      if (toast) {
+        toast.warning('Please fill in all required fields correctly')
+      }
       return
     }
     
     setLoading(true)
     setError('')
-    toast.info('🤖 AI is generating questions...')
+    if (toast) {
+      toast.info('🤖 AI is generating questions...')
+    }
     
     try {
       const result = await generateQuestions({
@@ -61,10 +65,14 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
       
       setGeneratedQuestions(result.questions)
       setStep(2)
-      toast.success(`🎉 Generated ${result.questions.length} questions successfully!`)
+      if (toast) {
+        toast.success(`🎉 Generated ${result.questions.length} questions successfully!`)
+      }
     } catch (err) {
       setError(err.message || 'Failed to generate questions')
-      toast.error(`Failed to generate questions: ${err.message}`)
+      if (toast) {
+        toast.error(`Failed to generate questions: ${err.message}`)
+      }
     } finally {
       setLoading(false)
     }
@@ -73,7 +81,9 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
   const createAssignment = async () => {
     setLoading(true)
     setError('')
-    toast.info('Creating assignment...')
+    if (toast) {
+      toast.info('Creating assignment...')
+    }
     
     try {
       const due_at = `${formData.due_date}T${formData.due_time}:00`
@@ -94,7 +104,9 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
       
       const result = await createAssignmentWithAI(assignmentData)
       setStep(3)
-      toast.success('🎉 Assignment created and assigned to students!')
+      if (toast) {
+        toast.success('🎉 Assignment created and assigned to students!')
+      }
       
       // Notify parent component
       setTimeout(() => {
@@ -103,7 +115,9 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
       
     } catch (err) {
       setError(err.message || 'Failed to create assignment')
-      toast.error(`Failed to create assignment: ${err.message}`)
+      if (toast) {
+        toast.error(`Failed to create assignment: ${err.message}`)
+      }
     } finally {
       setLoading(false)
     }
@@ -192,38 +206,12 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
                   className="input"
                 />
               </div>
-              
-              {question.rubric_keywords && (
-                <div className="form-group">
-                  <label>Rubric Keywords</label>
-                  <div className="keyword-tags">
-                    {question.rubric_keywords.map((keyword, keyIndex) => (
-                      <span key={keyIndex} className="tag">
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="form-group">
-                <label>Explanation</label>
-                <textarea
-                  value={question.explanation}
-                  onChange={(e) => editQuestion(index, 'explanation', e.target.value)}
-                  className="input"
-                  rows={2}
-                />
-              </div>
             </div>
           ))}
         </div>
         
         <div className="step-actions">
-          <button 
-            className="btn btn-secondary"
-            onClick={() => setStep(1)}
-          >
+          <button className="btn btn-secondary" onClick={() => setStep(1)}>
             Back to Form
           </button>
           <button 
@@ -238,180 +226,90 @@ export default function AssignmentCreator({ classes, onAssignmentCreated, onCanc
     )
   }
 
+  // Step 1: Form
   return (
     <div className="assignment-creator">
       <div className="step-header">
-        <h3>🤖 AI-Powered Assignment Creator</h3>
-        <p>Create assignments with AI-generated questions tailored to your curriculum</p>
+        <h3>🤖 Create AI-Powered Assignment</h3>
+        <p>Fill in the details and AI will generate questions for you</p>
       </div>
       
       {error && <div className="error-message">{error}</div>}
-      
-      {/* Form Progress */}
-      {Object.keys(touched).length > 0 && (
-        <div className="form-progress">
-          <span className="form-progress__icon">📋</span>
-          <span className="form-progress__text">
-            Form completion: <span className="form-progress__count">
-              {Object.values(touched).filter(Boolean).length}/{Object.keys(getFieldProps('title')).length + 3} fields
-            </span>
-          </span>
-        </div>
-      )}
       
       <form onSubmit={(e) => {
         e.preventDefault()
         handleSubmit(generateQuestionsWithAI)
       }}>
-        <div className="form-row">
-          <FormField
-            label="Class"
-            name="class_id"
-            required
-            {...getFieldProps('class_id')}
-          >
-            <select
-              name="class_id"
-              value={formData.class_id}
-              onChange={getFieldProps('class_id').onChange}
-              onBlur={getFieldProps('class_id').onBlur}
-              className={`form-field__input ${getFieldProps('class_id').error ? 'input--error' : ''}`}
-            >
-              <option value="">Select a class</option>
-              {classes.map(cls => (
-                <option key={cls.id} value={cls.id}>{cls.name}</option>
-              ))}
-            </select>
-          </FormField>
-          
-          <div className="form-group">
-            <label>Subject</label>
-            <select
-              name="subject"
-              value={formData.subject}
-              onChange={handleFormChange}
-              className="input--enhanced"
-            >
-              <option value="Math">Math</option>
-              <option value="Science">Science</option>
-              <option value="English">English</option>
-              <option value="History">History</option>
-            </select>
-          </div>
-        </div>
-        
         <FormField
           label="Assignment Title"
           name="title"
-          placeholder="e.g., Fraction Addition and Subtraction"
+          placeholder="e.g., Fractions Practice Quiz"
           required
           {...getFieldProps('title')}
         />
         
-        <div className="form-row">
-          <div className="form-group">
-            <label>Skill Focus</label>
-            <select
-              name="skill_tag"
-              value={formData.skill_tag}
-              onChange={handleFormChange}
-              className="input"
-            >
-              <option value="fractions">Fractions</option>
-              <option value="algebra">Algebra</option>
-              <option value="geometry">Geometry</option>
-              <option value="statistics">Statistics</option>
-            </select>
-          </div>
-          
-          <div className="form-group">
-            <label>Difficulty Level</label>
-            <select
-              name="difficulty"
-              value={formData.difficulty}
-              onChange={handleFormChange}
-              className="input"
-            >
-              <option value="1">Beginner (1)</option>
-              <option value="2">Intermediate (2)</option>
-              <option value="3">Advanced (3)</option>
-            </select>
-          </div>
-          
-          <FormField
-            label="Number of Questions"
-            name="num_questions"
-            required
-            {...getFieldProps('num_questions')}
+        <FormField
+          label="Class"
+          name="class_id"
+          required
+          {...getFieldProps('class_id')}
+        >
+          <select
+            className="form-field__input"
+            {...getFieldProps('class_id')}
           >
-            <select
-              name="num_questions"
-              value={formData.num_questions}
-              onChange={getFieldProps('num_questions').onChange}
-              onBlur={getFieldProps('num_questions').onBlur}
-              className={`form-field__input ${getFieldProps('num_questions').error ? 'input--error' : ''}`}
-            >
-              <option value="3">3 Questions</option>
-              <option value="5">5 Questions</option>
-              <option value="7">7 Questions</option>
-              <option value="10">10 Questions</option>
-            </select>
-          </FormField>
-        </div>
+            <option value="">Select a class</option>
+            {classes.map(cls => (
+              <option key={cls.id} value={cls.id}>
+                {cls.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
         
-        <div className="form-row">
-          <FormField
-            label="Due Date"
-            name="due_date"
-            type="date"
-            required
-            {...getFieldProps('due_date')}
-          />
-          
-          <div className="form-group">
-            <label>Due Time</label>
-            <input
-              type="time"
-              name="due_time"
-              value={formData.due_time}
-              onChange={handleFormChange}
-              className="input"
-            />
-          </div>
-          
-          <div className="form-group">
-            <label>Time Limit (minutes)</label>
-            <select
-              name="time_limit_minutes"
-              value={formData.time_limit_minutes}
-              onChange={handleFormChange}
-              className="input"
-            >
-              <option value="">No time limit</option>
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">1 hour</option>
-              <option value="90">1.5 hours</option>
-              <option value="120">2 hours</option>
-            </select>
-          </div>
-        </div>
-        
-        <div className="step-actions">
-          <button 
-            type="button"
-            className="btn btn-secondary"
-            onClick={onCancel}
+        <FormField
+          label="Subject"
+          name="subject"
+          {...getFieldProps('subject')}
+        >
+          <select
+            className="form-field__input"
+            {...getFieldProps('subject')}
           >
+            <option value="Math">Math</option>
+            <option value="Science">Science</option>
+            <option value="English">English</option>
+            <option value="History">History</option>
+          </select>
+        </FormField>
+        
+        <FormField
+          label="Number of Questions"
+          name="num_questions"
+          type="number"
+          placeholder="3"
+          required
+          {...getFieldProps('num_questions')}
+        />
+        
+        <FormField
+          label="Due Date"
+          name="due_date"
+          type="date"
+          required
+          {...getFieldProps('due_date')}
+        />
+        
+        <div className="form-actions">
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>
             Cancel
           </button>
           <button 
-            type="submit"
+            type="submit" 
             className="btn btn-primary"
-            disabled={loading}
+            disabled={isSubmitting || loading}
           >
-            {loading ? 'Generating Questions...' : '🤖 Generate Questions with AI'}
+            {loading ? 'Generating...' : '🤖 Generate Questions'}
           </button>
         </div>
       </form>

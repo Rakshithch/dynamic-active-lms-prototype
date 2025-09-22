@@ -5,11 +5,14 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 ## Project Overview
 
 Dynamic Active LMS is a K-12 Learning Management System prototype featuring:
-- Student dashboard with AI-powered recommendations
-- Quiz system with MCQ and short answer questions
-- AI-powered grading with rubric-based feedback
-- Teacher dashboard for assignment creation and analytics
-- Mastery tracking system
+- **Student dashboard** with AI-powered recommendations and timer-based quizzes
+- **Quiz system** with MCQ and short answer questions, time limits, and auto-submission
+- **AI-powered grading** with rubric-based feedback and instant results
+- **Teacher dashboard** with assignment creation, analytics, and mobile support
+- **Mobile-responsive design** with touch optimization and swipeable interfaces
+- **Advanced features**: Theme toggle, form validation, notifications, analytics charts
+- **Authentication system** with JWT tokens and role-based access
+- **Mastery tracking** with visual progress indicators
 
 ## Architecture
 
@@ -17,7 +20,7 @@ This is a microservices-based application with 4 main services:
 
 ### Service Architecture
 - **Web** (`services/web/`): React + Vite frontend (port 5173)
-- **API** (`services/api/`): Node.js/Express backend (port 8080)
+- **API** (`services/api/`): Node.js/Express backend (port 3001, mapped from 8080)
 - **AI** (`services/ai/`): FastAPI Python service for grading and recommendations (port 8000)
 - **DB**: PostgreSQL database (port 5432)
 
@@ -81,14 +84,22 @@ docker compose up --build -d db
 ### Testing Endpoints
 ```bash
 # Health checks
-curl http://localhost:8080/health    # API
+curl http://localhost:3001/health    # API
 curl http://localhost:8000/health    # AI service
 
-# Student dashboard (Ava = user ID 2)
-curl http://localhost:8080/student/2/dashboard
+# Authentication endpoints
+curl -X POST http://localhost:3001/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"student.demo@example.com","password":"password123"}'
 
-# Teacher dashboard (Ms. Rivera = user ID 1)
-curl http://localhost:8080/teacher/1/dashboard
+# With authentication token (replace TOKEN with actual JWT)
+curl -H "Authorization: Bearer TOKEN" http://localhost:3001/student/dashboard
+curl -H "Authorization: Bearer TOKEN" http://localhost:3001/teacher/dashboard
+
+# AI question generation
+curl -X POST http://localhost:8000/generate_questions \
+  -H "Content-Type: application/json" \
+  -d '{"topic":"Fractions","difficulty":1,"skill_tag":"math_fractions","num_questions":3}'
 ```
 
 ## Code Architecture & Patterns
@@ -101,11 +112,17 @@ curl http://localhost:8080/teacher/1/dashboard
 - Mastery updates: After each submission, recalculates skill mastery percentage
 
 ### Web Service (`services/web/src/`)
-- `App.jsx`: Main component with role switching (student/teacher views)
-- `Teacher.jsx`: Teacher dashboard and assignment creation
-- `api.js`: API client functions
-- State management: React hooks, no external state library
-- Styling: Simple CSS classes in `styles.css`
+- `App.jsx`: Main component with authentication, theming, and error boundaries
+- `Teacher.jsx`: Teacher dashboard with mobile navigation and analytics
+- `TeacherAnalytics.jsx`: Interactive charts and performance metrics
+- `Timer.jsx`: Quiz countdown with visual warnings and auto-submission
+- `ThemeContext.jsx` & `ThemeToggle.jsx`: Dark/light mode switching
+- `MobileUtils.jsx`: Mobile-responsive components and touch utilities
+- `FormValidation.jsx`: Real-time validation with success/error states
+- `Toast.jsx`: Non-intrusive notification system
+- `api.js`: API client functions with authentication
+- State management: React Context API with hooks
+- Styling: CSS with mobile-first responsive design
 
 ### AI Service (`services/ai/`)
 - `app.py`: FastAPI app with two main endpoints:
@@ -131,7 +148,7 @@ Copy `.env.example` to `.env` and modify as needed.
 
 ## Service URLs & Ports
 - Web UI: http://localhost:5173
-- API: http://localhost:8080
+- API: http://localhost:3001 (mapped from internal 8080)
 - AI Service: http://localhost:8000  
 - Database: localhost:5432
 

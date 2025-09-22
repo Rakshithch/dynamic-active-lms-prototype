@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { login } from './api'
-import { useFormValidation, validators, FormField } from './FormValidation.jsx'
+import { useFormValidation, validators, FormField } from './SimpleFormValidation.jsx'
 import { useToast } from './Toast.jsx'
-export default function Login({ onLogin, loading = false }) {
+
+export default function WorkingLogin({ onLogin, loading = false }) {
   const toast = useToast()
 
   const {
@@ -26,7 +27,9 @@ export default function Login({ onLogin, loading = false }) {
 
   const onSubmit = async (formData) => {
     await onLogin(formData.email, formData.password)
-    toast.success('Login successful! Welcome back! 👋')
+    if (toast) {
+      toast.success('Login successful! Welcome back! 👋')
+    }
   }
 
   // Quick login buttons for demo

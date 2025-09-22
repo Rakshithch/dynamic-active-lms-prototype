@@ -1,2 +1,33 @@
-<!doctype html><html><head><meta charset="UTF-8"><title>LMS</title></head>
-<body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LMS</title>
+</head>
+<body>
+  <div id="root">
+    <div style="padding: 20px; background: yellow; border: 2px solid red;">
+      <h1>🔄 Loading...</h1>
+      <p>If you see this, HTML is loading but React hasn't started yet.</p>
+      <p id="debug-info">Checking React...</p>
+    </div>
+  </div>
+  
+  <script>
+    console.log('HTML loaded successfully!');
+    document.getElementById('debug-info').textContent = 'HTML ready, loading React...';
+  </script>
+  
+  <script type="module" src="/src/main.jsx"></script>
+  
+  <script>
+    // Check if React fails to load after 3 seconds
+    setTimeout(() => {
+      const root = document.getElementById('root');
+      if (root.innerHTML.includes('Loading...')) {
+        root.innerHTML = '<div style="padding: 20px; background: #ffe6e6; border: 2px solid red;"><h1>❌ React Failed to Load</h1><p>React did not start within 3 seconds. Check browser console for errors.</p></div>';
+      }
+    }, 3000);
+  </script>
+</body>
+</html>

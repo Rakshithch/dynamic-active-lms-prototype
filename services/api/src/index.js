@@ -115,7 +115,7 @@ app.get('/assignments/:id/quiz', async (req, res) => {
   const assignmentId = Number(req.params.id)
   try {
     const assignment = (await query(`
-      SELECT a.id, a.class_id, a.lesson_id, a.type, a.due_at, l.title, l.skill_tag
+      SELECT a.id, a.class_id, a.lesson_id, a.type, a.due_at, a.time_limit_minutes, l.title, l.skill_tag
       FROM assignments a
       JOIN lessons l ON l.id = a.lesson_id
       WHERE a.id=$1
@@ -288,7 +288,7 @@ app.post('/ai/generate-questions', authenticateToken, requireRole('teacher'), as
 // POST /assignments
 // Create an assignment with optional AI-generated questions
 app.post('/assignments', authenticateToken, requireRole('teacher'), async (req, res) => {
-  const { class_id, lesson_data, questions, due_at, type } = req.body
+  const { class_id, lesson_data, questions, due_at, type, time_limit_minutes } = req.body
   const teacherId = req.user.id
   
   try {
@@ -330,10 +330,10 @@ app.post('/assignments', authenticateToken, requireRole('teacher'), async (req, 
     
     // Create assignment
     const assignment = await query(
-      `INSERT INTO assignments (class_id, lesson_id, type, due_at)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, class_id, lesson_id, type, due_at`,
-      [class_id, lesson_id, type || 'quiz', due_at]
+      `INSERT INTO assignments (class_id, lesson_id, type, due_at, time_limit_minutes)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, class_id, lesson_id, type, due_at, time_limit_minutes`,
+      [class_id, lesson_id, type || 'quiz', due_at, time_limit_minutes]
     )
     
     const assignmentId = assignment[0].id

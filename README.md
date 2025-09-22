@@ -13,21 +13,23 @@ Dynamic Active LMS is a comprehensive K-12 Learning Management System that lever
 
 ### **Intelligent Assignment Creation**
 - **AI Question Generation**: Automatically creates contextual questions based on topic, skill level, and difficulty
-- **Smart Rubric Creation**: Generates rubric keywords for consistent grading
+- **Smart Subject-Specific Questions**: Generates relevant content for Math, Science, English, and Social Studies
 - **Multi-Format Support**: Creates both MCQ and short-answer questions with explanations
 - **Teacher Review Interface**: Allows editing and refinement of AI-generated content
+- **Dynamic Difficulty Adjustment**: Adapts question complexity based on grade level and skill tag
 
 ### **Automated Grading System**
 - **Real-time Assessment**: Instant grading of student submissions
 - **Rubric-based Scoring**: Uses AI to evaluate short-answer responses against rubric criteria
 - **Constructive Feedback**: Provides specific suggestions for improvement
 - **Performance Tracking**: Updates student mastery levels automatically
+- **Time-Limited Quizzes**: Built-in timer with automatic submission when time expires
 
 ### **Personalized Learning**
 - **AI Recommendations**: Suggests next lessons based on student performance data
 - **Adaptive Learning Paths**: Directs students to remediation or enrichment content
 - **Mastery Tracking**: Monitors progress across different skill areas
-- **Data-Driven Insights**: Provides teachers with actionable analytics
+- **Data-Driven Insights**: Provides teachers with actionable analytics and visual charts
 
 ## 🏗️ Technical Architecture
 
@@ -83,23 +85,38 @@ docker compose up --build -d
 
 ## 🎨 Key Features Demonstrated
 
+### **✨ New Advanced Features**
+- **📱 Mobile-Responsive Design**: Touch-optimized UI with swipeable tabs and mobile navigation
+- **⏱️ Time-Limited Quizzes**: Built-in countdown timer with visual warnings and auto-submission
+- **🎨 Theme Toggle**: Light/dark mode switching with persistent user preferences
+- **✅ Advanced Form Validation**: Real-time validation with success/error feedback
+- **📊 Teacher Analytics Dashboard**: Interactive charts showing student performance metrics
+- **📩 Toast Notifications**: Non-intrusive feedback system for user actions
+- **🛡️ Error Boundary**: Graceful error handling with user-friendly fallbacks
+
 ### **Student Dashboard**
 - AI-powered lesson recommendations based on performance
 - Due assignment tracking with priority sorting
 - Interactive quiz system with immediate feedback
 - Mastery progress visualization
+- **Mobile-optimized interface** with touch gestures
+- **Timer-based quizzes** with countdown and warnings
 
 ### **Teacher Dashboard**
 - **🤖 AI Assignment Creator**: Revolutionary question generation tool
-- Class performance analytics with visual charts
+- **📊 Analytics Dashboard**: Visual performance insights with multiple chart types
+- **📱 Mobile Navigation**: Swipeable tabs and responsive design
 - Student progress monitoring and insights
 - Assignment management with automated workflows
+- **Time limit configuration** for quizzes and assignments
 
 ### **Quiz System**
 - Multiple question types (MCQ, Short Answer)
 - Real-time AI grading and feedback
 - Rubric-based assessment for consistency
-- Automatic mastery level updates
+- **⏰ Time-limited sessions** with visual countdown
+- **Auto-submission** when time expires
+- Mobile-friendly quiz interface
 
 ## 💡 Innovation Highlights
 
@@ -124,19 +141,29 @@ dynamic-active-lms/
 │   │   ├── src/
 │   │   │   ├── App.jsx      # Main application component
 │   │   │   ├── Login.jsx    # Authentication interface
-│   │   │   ├── Teacher.jsx  # Teacher dashboard
+│   │   │   ├── Teacher.jsx  # Teacher dashboard with mobile support
 │   │   │   ├── AssignmentCreator.jsx  # AI assignment creator
+│   │   │   ├── TeacherAnalytics.jsx   # Analytics dashboard with charts
+│   │   │   ├── Charts.jsx   # Reusable chart components
+│   │   │   ├── Timer.jsx    # Quiz countdown timer component
+│   │   │   ├── ThemeContext.jsx       # Theme management
+│   │   │   ├── ThemeToggle.jsx        # Dark/light mode toggle
+│   │   │   ├── Toast.jsx    # Notification system
+│   │   │   ├── MobileUtils.jsx        # Mobile-responsive components
+│   │   │   ├── FormValidation.jsx     # Advanced form validation
+│   │   │   ├── ErrorBoundary.jsx      # Error handling
+│   │   │   ├── Loading.jsx  # Loading indicators
 │   │   │   ├── api.js       # API client functions
-│   │   │   └── styles.css   # Application styles
+│   │   │   └── styles.css   # Application styles with mobile support
 │   │   └── package.json     # Frontend dependencies
 │   ├── api/                 # Node.js backend service
 │   │   ├── src/
-│   │   │   ├── index.js     # Main API server
-│   │   │   ├── auth.js      # Authentication middleware
-│   │   │   └── db.js        # Database connection
+│   │   │   ├── index.js     # Main API server with auth & analytics
+│   │   │   ├── auth.js      # JWT authentication middleware
+│   │   │   └── db.js        # PostgreSQL connection
 │   │   └── package.json     # Backend dependencies
 │   ├── ai/                  # Python AI service
-│   │   ├── app.py           # FastAPI application
+│   │   ├── app.py           # FastAPI with question generation
 │   │   └── requirements.txt # Python dependencies
 │   └── db/
 │       └── init.sql         # Database schema and seed data
@@ -241,14 +268,19 @@ This project demonstrates:
 ## 🤝 Contributing
 
 This project showcases skills in:
-- React.js and modern JavaScript/ES6+
-- Node.js and Express.js backend development
-- Python and FastAPI for AI/ML services
-- PostgreSQL database design and management
-- Docker containerization and deployment
-- JWT authentication and security practices
-- RESTful API design and documentation
-- Responsive web design and user experience
+- **React.js** with modern hooks, context API, and functional components
+- **Advanced JavaScript/ES6+** with async/await, destructuring, and modules
+- **Node.js & Express.js** with RESTful API design and middleware
+- **Python & FastAPI** for high-performance AI/ML microservices
+- **PostgreSQL** with complex queries, transactions, and JSON data types
+- **Docker & Docker Compose** for microservices orchestration
+- **JWT Authentication** with role-based access control and security
+- **Mobile-First Design** with responsive layouts and touch optimization
+- **Data Visualization** with interactive charts and analytics dashboards
+- **State Management** with React Context and complex form handling
+- **Real-time Features** with timers, notifications, and live updates
+- **Error Handling** with boundaries, validation, and user feedback
+- **Performance Optimization** with lazy loading and efficient rendering
 
 ---
 
